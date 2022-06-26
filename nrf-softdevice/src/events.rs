@@ -50,7 +50,7 @@ fn on_soc_evt<F: FnMut(SocEvent)>(evt: u32, evt_handler: &mut F) {
 }
 
 // TODO actually derive this from the headers + the ATT_MTU
-const BLE_EVT_MAX_SIZE: u16 = 128;
+const BLE_EVT_MAX_SIZE: u16 = 640;
 
 pub(crate) async fn run<F: FnMut(SocEvent)>(mut soc_evt_handler: F) -> ! {
     poll_fn(|cx| unsafe {
