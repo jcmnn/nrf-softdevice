@@ -1,13 +1,12 @@
-use core::convert::TryFrom;
 use core::mem::MaybeUninit;
 use core::task::Poll;
-use embassy::waitqueue::AtomicWaker;
+
+use embassy_sync::waitqueue::AtomicWaker;
 use futures::future::poll_fn;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
 use crate::pac::interrupt;
-use crate::raw;
-use crate::RawError;
+use crate::{raw, RawError};
 
 static SWI2_WAKER: AtomicWaker = AtomicWaker::new();
 
@@ -33,7 +32,7 @@ pub enum SocEvent {
 }
 
 fn on_soc_evt<F: FnMut(SocEvent)>(evt: u32, evt_handler: &mut F) {
-    info!("soc evt {:?}", evt);
+    trace!("soc evt {:?}", evt);
 
     match evt {
         raw::NRF_SOC_EVTS_NRF_EVT_FLASH_OPERATION_ERROR => crate::flash::on_flash_error(),

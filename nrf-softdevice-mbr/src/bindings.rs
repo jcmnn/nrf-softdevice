@@ -36,6 +36,13 @@
  * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#![allow(
+    clippy::fn_to_numeric_cast,
+    clippy::missing_safety_doc,
+    clippy::redundant_static_lifetimes,
+    clippy::useless_transmute
+)]
+
 pub type c_schar = i8;
 pub type c_uchar = u8;
 pub type c_char = u8;
@@ -331,9 +338,7 @@ fn bindgen_test_layout_sd_mbr_command_copy_bl_t() {
         concat!("Alignment of ", stringify!(sd_mbr_command_copy_bl_t))
     );
     assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<sd_mbr_command_copy_bl_t>())).bl_src as *const _ as usize
-        },
+        unsafe { &(*(::core::ptr::null::<sd_mbr_command_copy_bl_t>())).bl_src as *const _ as usize },
         0usize,
         concat!(
             "Offset of field: ",
@@ -343,9 +348,7 @@ fn bindgen_test_layout_sd_mbr_command_copy_bl_t() {
         )
     );
     assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<sd_mbr_command_copy_bl_t>())).bl_len as *const _ as usize
-        },
+        unsafe { &(*(::core::ptr::null::<sd_mbr_command_copy_bl_t>())).bl_len as *const _ as usize },
         4usize,
         concat!(
             "Offset of field: ",
@@ -387,24 +390,15 @@ fn bindgen_test_layout_sd_mbr_command_vector_table_base_set_t() {
     assert_eq!(
         ::core::mem::size_of::<sd_mbr_command_vector_table_base_set_t>(),
         4usize,
-        concat!(
-            "Size of: ",
-            stringify!(sd_mbr_command_vector_table_base_set_t)
-        )
+        concat!("Size of: ", stringify!(sd_mbr_command_vector_table_base_set_t))
     );
     assert_eq!(
         ::core::mem::align_of::<sd_mbr_command_vector_table_base_set_t>(),
         4usize,
-        concat!(
-            "Alignment of ",
-            stringify!(sd_mbr_command_vector_table_base_set_t)
-        )
+        concat!("Alignment of ", stringify!(sd_mbr_command_vector_table_base_set_t))
     );
     assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<sd_mbr_command_vector_table_base_set_t>())).address as *const _
-                as usize
-        },
+        unsafe { &(*(::core::ptr::null::<sd_mbr_command_vector_table_base_set_t>())).address as *const _ as usize },
         0usize,
         concat!(
             "Offset of field: ",
@@ -431,24 +425,15 @@ fn bindgen_test_layout_sd_mbr_command_irq_forward_address_set_t() {
     assert_eq!(
         ::core::mem::size_of::<sd_mbr_command_irq_forward_address_set_t>(),
         4usize,
-        concat!(
-            "Size of: ",
-            stringify!(sd_mbr_command_irq_forward_address_set_t)
-        )
+        concat!("Size of: ", stringify!(sd_mbr_command_irq_forward_address_set_t))
     );
     assert_eq!(
         ::core::mem::align_of::<sd_mbr_command_irq_forward_address_set_t>(),
         4usize,
-        concat!(
-            "Alignment of ",
-            stringify!(sd_mbr_command_irq_forward_address_set_t)
-        )
+        concat!("Alignment of ", stringify!(sd_mbr_command_irq_forward_address_set_t))
     );
     assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<sd_mbr_command_irq_forward_address_set_t>())).address
-                as *const _ as usize
-        },
+        unsafe { &(*(::core::ptr::null::<sd_mbr_command_irq_forward_address_set_t>())).address as *const _ as usize },
         0usize,
         concat!(
             "Offset of field: ",
@@ -499,9 +484,7 @@ fn bindgen_test_layout_sd_mbr_command_t__bindgen_ty_1() {
         concat!("Alignment of ", stringify!(sd_mbr_command_t__bindgen_ty_1))
     );
     assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<sd_mbr_command_t__bindgen_ty_1>())).copy_sd as *const _ as usize
-        },
+        unsafe { &(*(::core::ptr::null::<sd_mbr_command_t__bindgen_ty_1>())).copy_sd as *const _ as usize },
         0usize,
         concat!(
             "Offset of field: ",
@@ -511,9 +494,7 @@ fn bindgen_test_layout_sd_mbr_command_t__bindgen_ty_1() {
         )
     );
     assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<sd_mbr_command_t__bindgen_ty_1>())).compare as *const _ as usize
-        },
+        unsafe { &(*(::core::ptr::null::<sd_mbr_command_t__bindgen_ty_1>())).compare as *const _ as usize },
         0usize,
         concat!(
             "Offset of field: ",
@@ -523,9 +504,7 @@ fn bindgen_test_layout_sd_mbr_command_t__bindgen_ty_1() {
         )
     );
     assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<sd_mbr_command_t__bindgen_ty_1>())).copy_bl as *const _ as usize
-        },
+        unsafe { &(*(::core::ptr::null::<sd_mbr_command_t__bindgen_ty_1>())).copy_bl as *const _ as usize },
         0usize,
         concat!(
             "Offset of field: ",
@@ -535,10 +514,7 @@ fn bindgen_test_layout_sd_mbr_command_t__bindgen_ty_1() {
         )
     );
     assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<sd_mbr_command_t__bindgen_ty_1>())).base_set as *const _
-                as usize
-        },
+        unsafe { &(*(::core::ptr::null::<sd_mbr_command_t__bindgen_ty_1>())).base_set as *const _ as usize },
         0usize,
         concat!(
             "Offset of field: ",
@@ -549,8 +525,7 @@ fn bindgen_test_layout_sd_mbr_command_t__bindgen_ty_1() {
     );
     assert_eq!(
         unsafe {
-            &(*(::core::ptr::null::<sd_mbr_command_t__bindgen_ty_1>())).irq_forward_address_set
-                as *const _ as usize
+            &(*(::core::ptr::null::<sd_mbr_command_t__bindgen_ty_1>())).irq_forward_address_set as *const _ as usize
         },
         0usize,
         concat!(

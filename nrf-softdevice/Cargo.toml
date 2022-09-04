@@ -2,7 +2,7 @@
 name = "nrf-softdevice"
 version = "0.1.0"
 authors = ["Dario Nieuwenhuis <dirbaio@dirbaio.net>"]
-edition = "2018"
+edition = "2021"
 
 [features]
 
@@ -28,7 +28,7 @@ ble-gatt = []
 ble-gatt-server = ["ble-gatt"]
 ble-gatt-client = ["ble-gatt"]
 
-critical-section-impl = ["critical-section/custom-impl"]
+critical-section-impl = ["critical-section-1/restore-state-bool", "critical-section-02/custom-impl"]
 
 # Workaround l2cap credit bug. If set, infinite credits are issued
 # to the peer in batches. The `credits` config when establishing the channel is ignored.
@@ -38,10 +38,11 @@ ble-l2cap-credit-wrokaround = []
 [dependencies]
 defmt = { version = "0.3", optional = true }
 log = { version = "0.4.11", optional = true }
-critical-section = { version = "0.2.1" }
+critical-section-02 = { package = "critical-section", version = "0.2", optional = true }
+critical-section-1 = { package = "critical-section", version = "1.0", optional = true }
 
 num_enum = { version = "0.5.1", default-features = false }
-embassy = { version = "0.1.0" }
+embassy-sync = { version = "0.1.0" }
 cortex-m = "0.7.2"
 cortex-m-rt = ">=0.6.15,<0.8"
 heapless = "0.7.1"
@@ -67,5 +68,17 @@ nrf-softdevice-s140 = { version = "0.1.1", path = "../nrf-softdevice-s140", opti
 nrf-softdevice-macro = { version = "0.1.0", path = "../nrf-softdevice-macro" }
 
 [package.metadata.docs.rs]
-targets = ["thumbv7em-none-eabihf"]
-features = ["nrf52840", "s140", "ble-central", "ble-peripheral", "ble-l2cap", "ble-gatt-server", "ble-gatt-client"]
+targets = ["thumbv7em-none-eabi"]
+features = ["nrf52840", "s140", "ble-central", "ble-peripheral", "ble-l2cap", "ble-gatt-server", "ble-gatt-client", "ble-rssi"]
+
+[package.metadata.embassy_docs]
+src_base = "https://github.com/embassy-rs/nrf-softdevice/blob/nrf-softdevice-mbr-v$VERSION/nrf-softdevice-mbr/src/"
+src_base_git = "https://github.com/embassy-rs/nrf-softdevice/blob/$COMMIT/nrf-softdevice-mbr/src/"
+target = "thumbv7em-none-eabi"
+flavors = [
+    { name = "s112", features = ["nrf52832", "s112", "ble-peripheral", "ble-gatt-server", "ble-gatt-client", "ble-rssi"] },
+    { name = "s113", features = ["nrf52840", "s113", "ble-peripheral", "ble-l2cap", "ble-gatt-server", "ble-gatt-client", "ble-rssi"] },
+    { name = "s122", features = ["nrf52833", "s122", "ble-central", "ble-gatt-server", "ble-gatt-client", "ble-rssi"] },
+    { name = "s132", features = ["nrf52832", "s132", "ble-central", "ble-peripheral", "ble-l2cap", "ble-gatt-server", "ble-gatt-client", "ble-rssi"] },
+    { name = "s140", features = ["nrf52840", "s140", "ble-central", "ble-peripheral", "ble-l2cap", "ble-gatt-server", "ble-gatt-client", "ble-rssi"] },
+]

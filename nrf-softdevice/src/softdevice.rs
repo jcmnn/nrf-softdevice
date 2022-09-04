@@ -1,11 +1,9 @@
 use core::marker::PhantomData;
+use core::mem::MaybeUninit;
 use core::ptr;
 use core::sync::atomic::{AtomicBool, Ordering};
-use embassy::util::Forever;
 
-use crate::raw;
-use crate::RawError;
-use crate::{pac, SocEvent};
+use crate::{pac, raw, RawError, SocEvent};
 
 unsafe extern "C" fn fault_handler(id: u32, pc: u32, info: u32) {
     match (id, info) {
@@ -86,18 +84,16 @@ fn cfg_set(id: u32, cfg: &raw::ble_cfg_t) {
 }
 
 static ENABLED: AtomicBool = AtomicBool::new(false);
-static SOFTDEVICE: Forever<Softdevice> = Forever::new();
+static mut SOFTDEVICE: MaybeUninit<Softdevice> = MaybeUninit::uninit();
 
 impl Softdevice {
     /// Enable the softdevice.
-    ///
-    /// This function takes ownership of the softdevice-reserved peripherals to ensure application code doesn't attempt to use them after enabling.
     ///
     /// # Panics
     /// - Panics if the requested configuration requires more memory than reserved for the softdevice. In that case, you can give more memory to the softdevice by editing the RAM start address in `memory.x`. The required start address is logged prior to panic.
     /// - Panics if the requested configuration has too high memory requirements for the softdevice. The softdevice supports a maximum dynamic memory size of 64kb.
     /// - Panics if called multiple times. Must be called at most once.
-    pub fn enable(config: &Config) -> &'static Softdevice {
+    pub fn enable(config: &Config) -> &'static mut Softdevice {
         if ENABLED
             .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
             .is_err()
@@ -148,9 +144,7 @@ impl Softdevice {
                 &raw::ble_cfg_t {
                     conn_cfg: raw::ble_conn_cfg_t {
                         conn_cfg_tag: APP_CONN_CFG_TAG,
-                        params: raw::ble_conn_cfg_t__bindgen_ty_1 {
-                            gattc_conn_cfg: val,
-                        },
+                        params: raw::ble_conn_cfg_t__bindgen_ty_1 { gattc_conn_cfg: val },
                     },
                 },
             );
@@ -162,9 +156,7 @@ impl Softdevice {
                 &raw::ble_cfg_t {
                     conn_cfg: raw::ble_conn_cfg_t {
                         conn_cfg_tag: APP_CONN_CFG_TAG,
-                        params: raw::ble_conn_cfg_t__bindgen_ty_1 {
-                            gatts_conn_cfg: val,
-                        },
+                        params: raw::ble_conn_cfg_t__bindgen_ty_1 { gatts_conn_cfg: val },
                     },
                 },
             );
@@ -177,9 +169,7 @@ impl Softdevice {
                 &raw::ble_cfg_t {
                     conn_cfg: raw::ble_conn_cfg_t {
                         conn_cfg_tag: APP_CONN_CFG_TAG,
-                        params: raw::ble_conn_cfg_t__bindgen_ty_1 {
-                            l2cap_conn_cfg: val,
-                        },
+                        params: raw::ble_conn_cfg_t__bindgen_ty_1 { l2cap_conn_cfg: val },
                     },
                 },
             );
@@ -198,9 +188,7 @@ impl Softdevice {
             cfg_set(
                 raw::BLE_GAP_CFGS_BLE_GAP_CFG_ROLE_COUNT,
                 &raw::ble_cfg_t {
-                    gap_cfg: raw::ble_gap_cfg_t {
-                        role_count_cfg: val,
-                    },
+                    gap_cfg: raw::ble_gap_cfg_t { role_count_cfg: val },
                 },
             );
         }
@@ -209,9 +197,7 @@ impl Softdevice {
             cfg_set(
                 raw::BLE_GAP_CFGS_BLE_GAP_CFG_DEVICE_NAME,
                 &raw::ble_cfg_t {
-                    gap_cfg: raw::ble_gap_cfg_t {
-                        device_name_cfg: val,
-                    },
+                    gap_cfg: raw::ble_gap_cfg_t { device_name_cfg: val },
                 },
             );
         }
@@ -220,9 +206,7 @@ impl Softdevice {
             cfg_set(
                 raw::BLE_GAP_CFGS_BLE_GAP_CFG_PPCP_INCL_CONFIG,
                 &raw::ble_cfg_t {
-                    gap_cfg: raw::ble_gap_cfg_t {
-                        ppcp_include_cfg: val,
-                    },
+                    gap_cfg: raw::ble_gap_cfg_t { ppcp_include_cfg: val },
                 },
             );
         }
@@ -231,9 +215,7 @@ impl Softdevice {
             cfg_set(
                 raw::BLE_GAP_CFGS_BLE_GAP_CFG_CAR_INCL_CONFIG,
                 &raw::ble_cfg_t {
-                    gap_cfg: raw::ble_gap_cfg_t {
-                        car_include_cfg: val,
-                    },
+                    gap_cfg: raw::ble_gap_cfg_t { car_include_cfg: val },
                 },
             );
         }
@@ -241,9 +223,7 @@ impl Softdevice {
             cfg_set(
                 raw::BLE_GATTS_CFGS_BLE_GATTS_CFG_SERVICE_CHANGED,
                 &raw::ble_cfg_t {
-                    gatts_cfg: raw::ble_gatts_cfg_t {
-                        service_changed: val,
-                    },
+                    gatts_cfg: raw::ble_gatts_cfg_t { service_changed: val },
                 },
             );
         }
@@ -258,17 +238,17 @@ impl Softdevice {
 
         let mut wanted_app_ram_base = app_ram_base;
         let ret = unsafe { raw::sd_ble_enable(&mut wanted_app_ram_base as _) };
-        info!(
-            "softdevice RAM: {:?} bytes",
-            wanted_app_ram_base - 0x20000000
-        );
+        info!("softdevice RAM: {:?} bytes", wanted_app_ram_base - 0x20000000);
         match RawError::convert(ret) {
             Ok(()) => {}
             Err(RawError::NoMem) => {
                 if wanted_app_ram_base <= app_ram_base {
                     panic!("selected configuration has too high RAM requirements.")
                 } else {
-                    panic!("too little RAM for softdevice. Change your app's RAM start address to {:x}", wanted_app_ram_base);
+                    panic!(
+                        "too little RAM for softdevice. Change your app's RAM start address to {:x}",
+                        wanted_app_ram_base
+                    );
                 }
             }
             Err(err) => panic!("sd_ble_enable err {:?}", err),
@@ -297,7 +277,7 @@ impl Softdevice {
             .map(|x| x.rx_mps)
             .unwrap_or(raw::BLE_L2CAP_MPS_MIN as u16);
 
-        SOFTDEVICE.put(Softdevice {
+        let sd = Softdevice {
             _private: PhantomData,
 
             #[cfg(feature = "ble-gatt")]
@@ -305,14 +285,21 @@ impl Softdevice {
 
             #[cfg(feature = "ble-l2cap")]
             l2cap_rx_mps,
-        })
+        };
+
+        unsafe {
+            let p = SOFTDEVICE.as_mut_ptr();
+            p.write(sd);
+            &mut *p
+        }
     }
 
     /// Return an instance to the softdevice without checking whether
     /// it is enabled or not. This is only safe if the softdevice is enabled
-    /// (a call to [`enable`] has returned without error)
+    /// (a call to [`enable`] has returned without error) and no `&mut` references
+    /// to the softdevice are active
     pub unsafe fn steal() -> &'static Softdevice {
-        SOFTDEVICE.steal()
+        &*SOFTDEVICE.as_ptr()
     }
 
     /// Runs the softdevice event handling loop.

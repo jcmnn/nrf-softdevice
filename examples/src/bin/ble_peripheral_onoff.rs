@@ -1,29 +1,23 @@
 #![no_std]
 #![no_main]
 #![feature(type_alias_impl_trait)]
-#![feature(alloc_error_handler)]
-#![allow(incomplete_features)]
 
 #[path = "../example_common.rs"]
 mod example_common;
 
 use core::mem;
-use cortex_m_rt::entry;
+
 use defmt::*;
-use embassy::executor::Executor;
-use embassy::util::Forever;
-use embassy_nrf::gpio::{AnyPin, Input, Pin as _, Pull};
+use embassy_executor::Spawner;
+use embassy_nrf::gpio::{Input, Pin as _, Pull};
 use embassy_nrf::interrupt::Priority;
 use futures::pin_mut;
-
 use nrf_softdevice::ble::{gatt_server, peripheral};
 use nrf_softdevice::{raw, Softdevice};
 
-static EXECUTOR: Forever<Executor> = Forever::new();
-
-#[embassy::task]
-async fn softdevice_task(sd: &'static Softdevice) {
-    sd.run().await;
+#[embassy_executor::task]
+async fn softdevice_task(sd: &'static Softdevice) -> ! {
+    sd.run().await
 }
 
 #[nrf_softdevice::gatt_service(uuid = "9e7312e0-2354-11eb-9f10-fbc30a62cf38")]
@@ -51,10 +45,7 @@ async fn run_bluetooth(sd: &'static Softdevice, server: &Server) {
 
     loop {
         let config = peripheral::Config::default();
-        let adv = peripheral::ConnectableAdvertisement::ScannableUndirected {
-            adv_data,
-            scan_data,
-        };
+        let adv = peripheral::ConnectableAdvertisement::ScannableUndirected { adv_data, scan_data };
         let conn = unwrap!(peripheral::advertise_connectable(sd, adv, &config).await);
 
         info!("advertising done!");
@@ -78,15 +69,54 @@ async fn run_bluetooth(sd: &'static Softdevice, server: &Server) {
     }
 }
 
-#[embassy::task]
-async fn bluetooth_task(sd: &'static Softdevice, button1: AnyPin, button2: AnyPin) {
-    let server: Server = unwrap!(gatt_server::register(sd));
+#[embassy_executor::main]
+async fn main(spawner: Spawner) {
+    info!("Hello World!");
+
+    let mut config = embassy_nrf::config::Config::default();
+    config.gpiote_interrupt_priority = Priority::P2;
+    config.time_interrupt_priority = Priority::P2;
+    let p = embassy_nrf::init(config);
+
+    let config = nrf_softdevice::Config {
+        clock: Some(raw::nrf_clock_lf_cfg_t {
+            source: raw::NRF_CLOCK_LF_SRC_RC as u8,
+            rc_ctiv: 4,
+            rc_temp_ctiv: 2,
+            accuracy: 7,
+        }),
+        conn_gap: Some(raw::ble_gap_conn_cfg_t {
+            conn_count: 6,
+            event_length: 24,
+        }),
+        conn_gatt: Some(raw::ble_gatt_conn_cfg_t { att_mtu: 256 }),
+        gatts_attr_tab_size: Some(raw::ble_gatts_cfg_attr_tab_size_t { attr_tab_size: 32768 }),
+        gap_role_count: Some(raw::ble_gap_cfg_role_count_t {
+            adv_set_count: 1,
+            periph_role_count: 3,
+            central_role_count: 3,
+            central_sec_count: 0,
+            _bitfield_1: raw::ble_gap_cfg_role_count_t::new_bitfield_1(0),
+        }),
+        gap_device_name: Some(raw::ble_gap_cfg_device_name_t {
+            p_value: b"HelloRust" as *const u8 as _,
+            current_len: 9,
+            max_len: 9,
+            write_perm: unsafe { mem::zeroed() },
+            _bitfield_1: raw::ble_gap_cfg_device_name_t::new_bitfield_1(raw::BLE_GATTS_VLOC_STACK as u8),
+        }),
+        ..Default::default()
+    };
+
+    let sd = Softdevice::enable(&config);
+    let server = unwrap!(Server::new(sd));
+    unwrap!(spawner.spawn(softdevice_task(sd)));
 
     info!("Bluetooth is OFF");
     info!("Press nrf52840-dk button 1 to enable, button 2 to disable");
 
-    let button1 = Input::new(button1, Pull::Up);
-    let button2 = Input::new(button2, Pull::Up);
+    let button1 = Input::new(p.P0_11.degrade(), Pull::Up);
+    let button2 = Input::new(p.P0_12.degrade(), Pull::Up);
     pin_mut!(button1);
     pin_mut!(button2);
     loop {
@@ -122,56 +152,4 @@ async fn bluetooth_task(sd: &'static Softdevice, button1: AnyPin, button2: AnyPi
         // It's super easy to cancel a complex tree of operations: just drop its future!
         futures::future::select(bluetooth_fut, off_fut).await;
     }
-}
-
-#[entry]
-fn main() -> ! {
-    info!("Hello World!");
-
-    let mut config = embassy_nrf::config::Config::default();
-    config.gpiote_interrupt_priority = Priority::P2;
-    config.time_interrupt_priority = Priority::P2;
-    let p = embassy_nrf::init(config);
-
-    let config = nrf_softdevice::Config {
-        clock: Some(raw::nrf_clock_lf_cfg_t {
-            source: raw::NRF_CLOCK_LF_SRC_RC as u8,
-            rc_ctiv: 4,
-            rc_temp_ctiv: 2,
-            accuracy: 7,
-        }),
-        conn_gap: Some(raw::ble_gap_conn_cfg_t {
-            conn_count: 6,
-            event_length: 24,
-        }),
-        conn_gatt: Some(raw::ble_gatt_conn_cfg_t { att_mtu: 256 }),
-        gatts_attr_tab_size: Some(raw::ble_gatts_cfg_attr_tab_size_t {
-            attr_tab_size: 32768,
-        }),
-        gap_role_count: Some(raw::ble_gap_cfg_role_count_t {
-            adv_set_count: 1,
-            periph_role_count: 3,
-            central_role_count: 3,
-            central_sec_count: 0,
-            _bitfield_1: raw::ble_gap_cfg_role_count_t::new_bitfield_1(0),
-        }),
-        gap_device_name: Some(raw::ble_gap_cfg_device_name_t {
-            p_value: b"HelloRust" as *const u8 as _,
-            current_len: 9,
-            max_len: 9,
-            write_perm: unsafe { mem::zeroed() },
-            _bitfield_1: raw::ble_gap_cfg_device_name_t::new_bitfield_1(
-                raw::BLE_GATTS_VLOC_STACK as u8,
-            ),
-        }),
-        ..Default::default()
-    };
-
-    let sd = Softdevice::enable(&config);
-
-    let executor = EXECUTOR.put(Executor::new());
-    executor.run(|spawner| {
-        unwrap!(spawner.spawn(softdevice_task(sd)));
-        unwrap!(spawner.spawn(bluetooth_task(sd, p.P0_11.degrade(), p.P0_12.degrade())));
-    });
 }
